@@ -806,3 +806,5 @@ CONFIG_XZ_DEC=y
 # Wireguard
 CONFIG_WIREGUARD=y
 
+# ReSukiSU
+CONFIG_KSU=n
