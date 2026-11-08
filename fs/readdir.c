@@ -460,6 +460,18 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 	f = fdget_pos(fd);
 	if (!f.file)
 		return -EBADF;
+#ifdef CONFIG_KSU_SUSFS_SUS_PATH
+       if (f.file->f_inode->i_sb->s_magic == FUSE_SUPER_MAGIC) {
+               path_err = susfs_get_data_path(&path);
+               if (!path_err) {
+                       buf.sb = path.dentry->d_inode->i_sb;
+                       goto orig_flow;
+               }
+       }
+       buf.sb = f.file->f_inode->i_sb;
+
+orig_flow:
+#endif
 	error = iterate_dir(f.file, &buf.ctx);
 	if (error >= 0)
 		error = buf.error;

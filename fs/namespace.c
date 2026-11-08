@@ -27,10 +27,20 @@
 #include <linux/bootmem.h>
 #include <linux/task_work.h>
 #include <linux/sched/task.h>
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs_def.h>
+#endif // #ifdef CONFIG_KSU_SUSFS
 
 #include "pnode.h"
 #include "internal.h"
 
+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+extern bool susfs_is_current_ksu_domain(void);
+extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;
+
+#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
+
+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 
 /* Maximum number of mounts in a mount namespace */
 unsigned int sysctl_mount_max __read_mostly = 100000;
@@ -128,6 +138,12 @@ static int mnt_alloc_group_id(struct mount *mnt)
 #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
 	int res;
 
+	/* - mnt_alloc_group_id will unlikely get called after screen is unlocked on reboot,
+	*   so here we can persistently check if current is ksu domain, and assign a sus
+	*   mnt_group_id if so.
+	* - Also we can re-use the original mnt_group_ida so there is no need to use
+	*   another ida nor hook the mnt_release_group_id() function.
+	*/
         if (susfs_is_current_ksu_domain()) {
                 res = ida_alloc_min(&mnt_group_ida, DEFAULT_KSU_MNT_GROUP_ID, GFP_KERNEL);
                 goto bypass_orig_flow;
